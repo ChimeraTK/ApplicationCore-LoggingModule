@@ -6,19 +6,17 @@
 
 #include "Logging.h"
 
+#include <ChimeraTK/ApplicationCore/TestFacility.h>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/test/included/unit_test.hpp>
-#include <boost/thread.hpp>
 
 #include <fstream>
 #include <stdlib.h>
-using namespace logging;
-
-#include "TestFacility.h"
-
-#include <boost/test/unit_test.hpp>
 using namespace boost::unit_test_framework;
+
+using namespace logging;
 
 struct DummyModule : ChimeraTK::ApplicationModule {
   using ChimeraTK::ApplicationModule::ApplicationModule;
