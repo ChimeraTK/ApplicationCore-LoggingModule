@@ -11,7 +11,7 @@ set(${PROJECT_NAME}_PATCH_VERSION 00)
 include(cmake/set_version_numbers.cmake)
 
 # Find the ControlSystemAdapter
-add_dependency(ChimeraTK-ApplicationCore 02.11 REQUIRED)
+add_dependency(ChimeraTK-ApplicationCore 03.00 REQUIRED)
 
 FIND_PACKAGE(Boost COMPONENTS date_time REQUIRED)
 

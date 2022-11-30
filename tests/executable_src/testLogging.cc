@@ -39,8 +39,9 @@ struct TestGroup : public ChimeraTK::ModuleGroup {
   } a{this, "A", ""};
   struct B : public ChimeraTK::ModuleGroup {
     using ChimeraTK::ModuleGroup::ModuleGroup;
-    DummyModule dummy{this, "Dummy", ""};
-  } b{this, "B", "", ctk::HierarchyModifier::hideThis};
+    // Create PVs like hierarchy of B is hidden
+    DummyModule dummy{this, "/MainGroup/Dummy", ""};
+  } b{this, "B", ""};
 };
 
 /**
@@ -63,18 +64,13 @@ struct testApp : public ChimeraTK::Application {
     if(fileCreated) {
       BOOST_CHECK_EQUAL(boost::filesystem::remove(filename.c_str()), true);
     }
-    // do not check if removing the folder fails. If the test is run in parallel other instances might have file in the directory
+    // do not check if removing the folder fails. If the test is run in parallel other instances might have files in the directory
     BOOST_CHECK_EQUAL(boost::filesystem::remove(dir), true);
   }
 
   DummyModule dummy{this, "Dummy", "Dummy"};
 
   LoggingModule log{this, "LoggingModule", "LoggingModule test"};
-
-  void initialise() override {
-    Application::initialise();
-    dumpConnections();
-  }
 
   bool fileCreated;
   std::string dir;
@@ -92,16 +88,24 @@ struct MultipleModuleApp : public ChimeraTK::Application {
 
   TestGroup group{this, "MainGroup", ""};
   LoggingModule log{this, "LoggingModule", "LoggingModule test"};
-
-  void initialise() override {
-    Application::initialise();
-    dumpConnections();
-  }
 };
+
+struct FailingApp : public ChimeraTK::Application {
+  FailingApp() : Application("test"){};
+  virtual ~FailingApp() final { shutdown(); }
+
+  TestGroup group{this, "MainGroup", ""};
+  // Add logging module that uses wrong tag - no PVs from Loggers will be found
+  LoggingModule log{this, "LoggingModule", "LoggingModule test", "wrongTag"};
+};
+
+BOOST_AUTO_TEST_CASE(testWrongTagUsed) {
+  BOOST_CHECK_THROW(FailingApp app, ChimeraTK::logic_error);
+}
 
 BOOST_AUTO_TEST_CASE(testMultipleModules) {
   MultipleModuleApp app;
-  ChimeraTK::TestFacility tf;
+  ChimeraTK::TestFacility tf(app);
   tf.setScalarDefault("/LoggingModule/maxTailLength", (uint)1);
   tf.runApplication();
   BOOST_CHECK_EQUAL(app.log.getNumberOfModules(), 2);
@@ -119,14 +123,14 @@ BOOST_AUTO_TEST_CASE(testMultipleModules) {
 
 BOOST_AUTO_TEST_CASE(testAlias) {
   testApp app;
-  ChimeraTK::TestFacility tf;
+  ChimeraTK::TestFacility tf(app);
   tf.setScalarDefault("/LoggingModule/maxTailLength", (uint)1);
   tf.runApplication();
   BOOST_CHECK_EQUAL(app.log.getNumberOfModules(), 1);
   app.dummy.logger->sendMessage("TestMessage", LogLevel::DEBUG);
   tf.stepApplication();
   std::string ss = tf.readScalar<std::string>("/LoggingModule/logTail");
-  BOOST_CHECK_EQUAL(ss.substr(ss.find("LoggingModule:") + 14, 5), std::string("Dummy"));
+  BOOST_CHECK_EQUAL(ss.substr(ss.find("LoggingModule:") + 14, 6), std::string("/Dummy"));
   auto alias = tf.getScalar<std::string>("/Dummy/Logging/alias");
   alias = "NewName";
   alias.write();
@@ -141,19 +145,19 @@ BOOST_AUTO_TEST_CASE(testAlias) {
 
 BOOST_AUTO_TEST_CASE(testAlias_withHierachies) {
   MultipleModuleApp app;
-  ChimeraTK::TestFacility tf;
+  ChimeraTK::TestFacility tf(app);
   tf.setScalarDefault("/LoggingModule/maxTailLength", (uint)1);
   tf.runApplication();
   BOOST_CHECK_EQUAL(app.log.getNumberOfModules(), 2);
   app.group.a.dummy.logger->sendMessage("TestMessage", LogLevel::DEBUG);
   tf.stepApplication();
   std::string ss = tf.readScalar<std::string>("/LoggingModule/logTail");
-  BOOST_CHECK_EQUAL(ss.substr(ss.find("LoggingModule:") + 14, 25), std::string("MainGroup/A/Dummy/Logging"));
+  BOOST_CHECK_EQUAL(ss.substr(ss.find("LoggingModule:") + 14, 26), std::string("/MainGroup/A/Dummy/Logging"));
 
   app.group.b.dummy.logger->sendMessage("TestMessage", LogLevel::DEBUG);
   tf.stepApplication();
   ss = tf.readScalar<std::string>("/LoggingModule/logTail");
-  BOOST_CHECK_EQUAL(ss.substr(ss.find("LoggingModule:") + 14, 25), std::string("MainGroup/B/Dummy/Logging"));
+  BOOST_CHECK_EQUAL(ss.substr(ss.find("LoggingModule:") + 14, 24), std::string("/MainGroup/Dummy/Logging"));
 
   auto aliasA = tf.getScalar<std::string>("/MainGroup/A/Dummy/Logging/alias");
   aliasA = "NewName";
@@ -182,7 +186,7 @@ BOOST_AUTO_TEST_CASE(testAlias_withHierachies) {
 
 BOOST_AUTO_TEST_CASE(testLogMsg) {
   testApp app;
-  ChimeraTK::TestFacility tf;
+  ChimeraTK::TestFacility tf(app);
   tf.setScalarDefault("/LoggingModule/maxTailLength", (uint)1);
   tf.runApplication();
   app.dummy.logger->sendMessage("test", LogLevel::DEBUG);
@@ -193,7 +197,7 @@ BOOST_AUTO_TEST_CASE(testLogMsg) {
 
 BOOST_AUTO_TEST_CASE(testLogfileFails) {
   testApp app;
-  ChimeraTK::TestFacility tf;
+  ChimeraTK::TestFacility tf(app);
 
   auto logFile = tf.getScalar<std::string>("/LoggingModule/logFile");
   tf.runApplication();
@@ -213,7 +217,7 @@ BOOST_AUTO_TEST_CASE(testLogfileFails) {
 
 BOOST_AUTO_TEST_CASE(testLogfile) {
   testApp app;
-  ChimeraTK::TestFacility tf;
+  ChimeraTK::TestFacility tf(app);
 
   auto logFile = tf.getScalar<std::string>("/LoggingModule/logFile");
 
@@ -239,7 +243,7 @@ BOOST_AUTO_TEST_CASE(testLogfile) {
 
 BOOST_AUTO_TEST_CASE(testLogging) {
   testApp app;
-  ChimeraTK::TestFacility tf;
+  ChimeraTK::TestFacility tf(app);
 
   auto logLevel = tf.getScalar<uint>("/LoggingModule/logLevel");
   auto tailLength = tf.getScalar<uint>("/LoggingModule/maxTailLength");

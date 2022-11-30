@@ -112,12 +112,12 @@
 
 #include <fstream>
 #include <map>
+#include <memory>
 #include <queue>
 
 namespace ctk = ChimeraTK;
 
 namespace logging {
-
   /** Define available logging levels. INTERNAL is used to
    * indicate an already published message  */
   enum LogLevel { DEBUG, INFO, WARNING, ERROR, SILENT, INTERNAL };
@@ -165,8 +165,8 @@ namespace logging {
      * \param description Description used to initialise the VariableGroup.
      * \param tag A tag that is used to identify the Logger by the LoggingModule.
      */
-    Logger(ctk::Module* module, const std::string& name = "Logging",
-        const std::string& description = "VariableGroup added by the Logger", const std::string& tag = "Logging");
+    Logger(ctk::ApplicationModule* module, const std::string& name = "Logging",
+        const std::string& description = "VariableGroup added by the Logger", const std::string& tag = "logging");
     /** Message to be send to the logging module */
     ctk::ScalarOutput<std::string> message;
 
@@ -207,29 +207,20 @@ namespace logging {
    */
   class LoggingModule : public ctk::ApplicationModule {
    private:
-    ctk::VariableNetworkNode getAccessorPair(const ctk::RegisterPath& namePrefix);
-
-    /** Map of VariableGroups required to build the hierarchies. The key it the
-     * full path name. */
-    std::map<std::string, ctk::VariableGroup> groupMap;
-
     /** Create VariableGroups from the full path of the module */
     ctk::RegisterPath prepareHierarchy(const ctk::RegisterPath& namePrefix);
 
     struct MessageSource {
-      struct Data : ctk::HierarchyModifyingGroup {
-        using ctk::HierarchyModifyingGroup::HierarchyModifyingGroup;
-        ctk::ScalarPushInput<std::string> msg{this, "message", "", "", {"_logging_internal"}};
-        ctk::ScalarPollInput<std::string> alias{this, "alias", "", "", {"_logging_internal"}};
-      };
-
-      Data data;
-      std::string sendingModule;
       MessageSource(const ChimeraTK::RegisterPath& path, Module* module)
-      : data(module, (std::string)path, ""), sendingModule(((std::string)path).substr(1)) {}
+      : _msg(module, path / "message", "", "", {"_logging_internal"}),
+        _alias(module, path / "alias", "", "", {"_logging_internal"}), sendingModule(path) {}
 
-      bool operator==(const MessageSource& other) { return other.sendingModule == sendingModule; }
-      bool operator==(const std::string& name) { return name == sendingModule; }
+      ctk::ScalarPushInput<std::string> _msg;
+      ctk::ScalarPollInput<std::string> _alias;
+      std::string sendingModule;
+
+      bool operator==(const MessageSource& other) const { return other.sendingModule == sendingModule; }
+      bool operator==(const std::string& name) const { return name == sendingModule; }
     };
     /** List of senders. */
     std::vector<MessageSource> sources;
@@ -240,16 +231,20 @@ namespace logging {
     /** Number of messages stored in the tail */
     size_t messageCounter{0};
 
+    /** Tag used to identify PVs added by Loggers */
+    std::string _loggingTag{};
+
     /** Broadcast message to cout/cerr and log file
      * \param msg The mesage
      * \param isError If true cerr is used. Else cout is used.
      */
     void broadcastMessage(std::string msg, const bool& isError = false);
 
+    void addVariableFromModel(const ChimeraTK::Model::ProcessVariableProxy& pv);
+
    public:
-    LoggingModule(ctk::EntityOwner* owner, const std::string& name, const std::string& description,
-        ctk::HierarchyModifier hierarchyModifier = ctk::HierarchyModifier::none,
-        const std::unordered_set<std::string>& tags = {"Logging"});
+    LoggingModule(ctk::ModuleGroup* owner, const std::string& name, const std::string& description,
+        const std::string& loggingTag = "logging", const std::unordered_set<std::string>& tags = {"logging_module"});
 
     LoggingModule() {}
 
@@ -280,10 +275,6 @@ namespace logging {
     void mainLoop() override;
 
     void terminate() override;
-
-    void findTagAndAppendToModule(ctk::VirtualModule& virtualParent, const std::string& tag,
-        bool eliminateAllHierarchies, bool eliminateFirstHierarchy, bool negate,
-        ctk::VirtualModule& root) const override;
   };
 
 } // namespace logging
