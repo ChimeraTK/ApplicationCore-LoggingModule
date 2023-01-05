@@ -80,10 +80,15 @@ LoggingModule::LoggingModule(ctk::ModuleGroup* owner, const std::string& name, c
   auto model = dynamic_cast<ctk::ModuleGroup*>(_owner)->getModel();
   auto neighbourDir = model.visit(ctk::Model::returnDirectory, ctk::Model::getNeighbourDirectory,
       ctk::Model::returnFirstHit(ctk::Model::DirectoryProxy{}));
+  std::vector<ctk::Model::ProcessVariableProxy> pvs;
   auto found = neighbourDir.visitByPath(".", [&](auto sourceDir) {
-    sourceDir.visit([&](auto pv) { addVariableFromModel(pv); }, ctk::Model::breadthFirstSearch,
+    sourceDir.visit([&](auto pv) { pvs.emplace_back(pv); }, ctk::Model::breadthFirstSearch,
         ctk::Model::keepProcessVariables && ctk::Model::keepTag(_loggingTag));
   });
+
+  for(auto pv : pvs) {
+    addVariableFromModel(pv);
+  }
   if(!found) {
     throw ChimeraTK::logic_error("Error during LoggingModule construction! Model is not valid.");
   }
