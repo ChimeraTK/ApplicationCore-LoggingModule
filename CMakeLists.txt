@@ -1,5 +1,5 @@
 PROJECT(ChimeraTK-ApplicationCore-LoggingModule)
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.16)
 
 include(cmake/add_dependency.cmake)
 
@@ -7,11 +7,11 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${C
 
 set(${PROJECT_NAME}_MAJOR_VERSION 01)
 set(${PROJECT_NAME}_MINOR_VERSION 00)
-set(${PROJECT_NAME}_PATCH_VERSION 01)
+set(${PROJECT_NAME}_PATCH_VERSION 02)
 include(cmake/set_version_numbers.cmake)
 
 # Find the ControlSystemAdapter
-add_dependency(ChimeraTK-ApplicationCore 03.00 REQUIRED)
+find_package(ChimeraTK-ApplicationCore 03.00 REQUIRED)
 
 FIND_PACKAGE(Boost COMPONENTS date_time REQUIRED)
 
@@ -38,8 +38,8 @@ add_library(${PROJECT_NAME} SHARED ${library_sources} ${headers} ${module_header
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${${PROJECT_NAME}_FULL_LIBRARY_VERSION}
                                                  SOVERSION ${${PROJECT_NAME}_SOVERSION})
 set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "${ChimeraTK-ApplicationCore_LINK_FLAGS}")
-target_link_libraries(${PROJECT_NAME} ${ChimeraTK-ApplicationCore_LIBRARIES}
-                                      ${Boost_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} PUBLIC ChimeraTK::ChimeraTK-ApplicationCore
+                                      PUBLIC ${Boost_LIBRARIES})
 
 
 # do not remove runtime path of the library when installing
@@ -52,7 +52,7 @@ include(cmake/enable_doxygen_documentation.cmake)
 include(cmake/enable_code_style_check.cmake)
 
 # Install the library and the executables
-install( TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin LIBRARY DESTINATION lib )
+install( TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}Targets RUNTIME DESTINATION bin LIBRARY DESTINATION lib )
 
 # all include files go into include/PROJECT_NAME
 # The exclusion of ${PROJECT_NAME} prevents the recursive installation of the files just being installed.
@@ -69,4 +69,6 @@ set(${PROJECT_NAME}_CXX_FLAGS "${ChimeraTK-ApplicationCore_CXX_FLAGS}")
 set(${PROJECT_NAME}_LINK_FLAGS "${ChimeraTK-ApplicationCore_LINK_FLAGS}")
 
 list(APPEND ${PROJECT_NAME}_PUBLIC_DEPENDENCIES "Boost COMPONENTS date_time")
+# we support our cmake EXPORTS as imported targets
+set(PROVIDES_EXPORTED_TARGETS 1)
 include(${CMAKE_SOURCE_DIR}/cmake/create_cmake_config_files.cmake)
