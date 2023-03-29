@@ -1,8 +1,6 @@
 PROJECT(ChimeraTK-ApplicationCore-LoggingModule)
 cmake_minimum_required(VERSION 3.16)
 
-include(cmake/add_dependency.cmake)
-
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules)
 
 set(${PROJECT_NAME}_MAJOR_VERSION 01)
@@ -37,7 +35,8 @@ endif()
 add_library(${PROJECT_NAME} SHARED ${library_sources} ${headers} ${module_headers})
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${${PROJECT_NAME}_FULL_LIBRARY_VERSION}
                                                  SOVERSION ${${PROJECT_NAME}_SOVERSION})
-set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "${ChimeraTK-ApplicationCore_LINK_FLAGS}")
+# exported includes are all under ${CMAKE_INSTALL_PREFIX}/include
+target_include_directories(${PROJECT_NAME} INTERFACE "$<INSTALL_INTERFACE:include>")
 target_link_libraries(${PROJECT_NAME} PUBLIC ChimeraTK::ChimeraTK-ApplicationCore
                                       PUBLIC ${Boost_LIBRARIES})
 
@@ -52,7 +51,10 @@ include(cmake/enable_doxygen_documentation.cmake)
 include(cmake/enable_code_style_check.cmake)
 
 # Install the library and the executables
-install( TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}Targets RUNTIME DESTINATION bin LIBRARY DESTINATION lib )
+# this defines architecture-dependent ${CMAKE_INSTALL_LIBDIR}
+include(GNUInstallDirs)
+install( TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}Targets 
+                                 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} )
 
 # all include files go into include/PROJECT_NAME
 # The exclusion of ${PROJECT_NAME} prevents the recursive installation of the files just being installed.
