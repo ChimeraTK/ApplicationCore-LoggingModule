@@ -105,7 +105,6 @@
  */
 
 #include <ChimeraTK/ApplicationCore/ApplicationModule.h>
-#include <ChimeraTK/ApplicationCore/HierarchyModifyingGroup.h>
 #include <ChimeraTK/ApplicationCore/ScalarAccessor.h>
 #include <ChimeraTK/ApplicationCore/VariableGroup.h>
 #include <ChimeraTK/RegisterPath.h>
