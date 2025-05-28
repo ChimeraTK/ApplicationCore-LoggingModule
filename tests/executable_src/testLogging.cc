@@ -12,8 +12,9 @@
 #include <boost/filesystem.hpp>
 #include <boost/test/included/unit_test.hpp>
 
-#include <fstream>
 #include <stdlib.h>
+
+#include <fstream>
 using namespace boost::unit_test_framework;
 
 using namespace logging;
@@ -83,7 +84,7 @@ struct testApp : public ChimeraTK::Application {
 };
 
 struct MultipleModuleApp : public ChimeraTK::Application {
-  MultipleModuleApp() : Application("test"){};
+  MultipleModuleApp() : Application("test") {};
   virtual ~MultipleModuleApp() { shutdown(); }
 
   TestGroup group{this, "MainGroup", ""};
@@ -91,7 +92,7 @@ struct MultipleModuleApp : public ChimeraTK::Application {
 };
 
 struct FailingApp : public ChimeraTK::Application {
-  FailingApp() : Application("test"){};
+  FailingApp() : Application("test") {};
   virtual ~FailingApp() final { shutdown(); }
 
   TestGroup group{this, "MainGroup", ""};
