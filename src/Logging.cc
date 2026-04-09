@@ -184,7 +184,7 @@ void LoggingModule::mainLoop() {
                              "when updating logging variables.");
     }
     try {
-      level = static_cast<LogLevel>(std::strtoul(&msg.at(0), NULL, 0));
+      level = static_cast<LogLevel>(std::strtoul(&msg.substr(0, 1).at(0), NULL, 0));
     }
     catch(std::out_of_range& e) {
       throw ctk::logic_error("Cannot find  message level"
