@@ -292,3 +292,30 @@ BOOST_AUTO_TEST_CASE(testLogging) {
   // should still be 4 because tailLength is 3!
   BOOST_CHECK_EQUAL(result.size(), 4);
 }
+
+BOOST_AUTO_TEST_CASE(testMessageWithNumber) {
+  testApp app;
+  ChimeraTK::TestFacility tf(app);
+
+  auto logLevel = tf.getScalar<uint>("/LoggingModule/logLevel");
+  auto tailLength = tf.getScalar<uint>("/LoggingModule/maxTailLength");
+
+  tf.runApplication();
+  logLevel = 0;
+  logLevel.write();
+  tailLength = 3;
+  tailLength.write();
+  app.dummy.logger->sendMessage("test message with number", LogLevel::DEBUG);
+  tf.stepApplication();
+  app.dummy.logger->sendMessage("4 test message with number", LogLevel::DEBUG);
+  tf.stepApplication();
+  app.dummy.logger->sendMessage("4test message with number", LogLevel::DEBUG);
+  tf.stepApplication();
+  auto tail = tf.readScalar<std::string>("/LoggingModule/logTail");
+  std::vector<std::string> result;
+  boost::algorithm::split(result, tail, boost::is_any_of("\n"));
+  BOOST_CHECK_EQUAL(result.size(), 4);
+  BOOST_CHECK_EQUAL(result.at(0).substr(result.at(0).find("->") + 3), std::string("test message with number"));
+  BOOST_CHECK_EQUAL(result.at(1).substr(result.at(1).find("->") + 3), std::string("4 test message with number"));
+  BOOST_CHECK_EQUAL(result.at(2).substr(result.at(2).find("->") + 3), std::string("4test message with number"));
+}
